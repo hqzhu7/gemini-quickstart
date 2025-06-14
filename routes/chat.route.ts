@@ -29,8 +29,10 @@ export async function handleChatRequest(request: Request): Promise<Response> {
     const body = await request.json();
     const aiRequest: AIRequest = {
       input: body.input,
+      messageList: body.messageList,
       apikey: body.apikey,
-      systemInstruction: body.systemInstruction
+      systemInstruction: body.systemInstruction,
+      temperature: body.temperature
     };
 
     // 调用AI服务
