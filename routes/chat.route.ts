@@ -32,7 +32,8 @@ export async function handleChatRequest(request: Request): Promise<Response> {
       messageList: body.messageList,
       apikey: body.apikey,
       systemInstruction: body.systemInstruction,
-      temperature: body.temperature
+      temperature: body.temperature,
+      streaming: body.streaming
     };
 
     // 调用AI服务
@@ -40,13 +41,30 @@ export async function handleChatRequest(request: Request): Promise<Response> {
 
     // 根据AI服务响应返回结果
     if (aiResponse.success) {
-      return new Response(
-        JSON.stringify(aiResponse),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
-      );
+      // 如果是流式响应
+      if (aiResponse.stream) {
+        return new Response(
+          aiResponse.stream,
+          { 
+            status: 200, 
+            headers: { 
+              ...corsHeaders, 
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive"
+            } 
+          }
+        );
+      } else {
+        // 非流式响应
+        return new Response(
+          JSON.stringify(aiResponse),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
     } else {
       return new Response(
         JSON.stringify(aiResponse),
