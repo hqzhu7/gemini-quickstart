@@ -12,7 +12,6 @@ export interface AIRequest {
 export interface AIResponse {
   success: boolean;
   response?: string;
-  systemInstruction?: string;
   error?: string;
   details?: string;
 }
@@ -51,8 +50,7 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
 
     return {
       success: true,
-      response: response.text,
-      systemInstruction: finalSystemInstruction
+      response: response.text
     };
 
   } catch (error) {
