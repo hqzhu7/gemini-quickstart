@@ -1,0 +1,16 @@
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: "GEMINI_API_KEY" });
+
+async function main() {
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: "Hello there",
+    config: {
+      systemInstruction: "你是一个高效的助理，能分布思考解决用户的问题，你一般都用中文回答内容",
+    },
+  });
+  console.log(response.text);
+}
+
+await main();
