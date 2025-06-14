@@ -14,11 +14,13 @@ export interface AIRequest {
   apikey: string;
   systemInstruction?: string;
   temperature?: number;
+  streaming?: boolean;
 }
 
 export interface AIResponse {
   success: boolean;
   response?: string;
+  stream?: ReadableStream;
   error?: string;
   details?: string;
 }
@@ -49,6 +51,9 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
         error: "Temperature must be between 0 and 2"
       };
     }
+
+    // 处理streaming参数，默认为true
+    const streaming = request.streaming ?? true;
 
     // 处理input类型判断和转换
     let contents: any;
@@ -83,20 +88,56 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
     // 初始化GoogleGenAI
     const ai = new GoogleGenAI({ apiKey: request.apikey });
 
-    // 调用Gemini API
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: contents,
-      config: {
-        systemInstruction: finalSystemInstruction,
-        temperature: temperature,
-      },
-    });
+    // 根据streaming参数选择API调用方式
+    if (streaming) {
+      // 流式响应
+      const response = await ai.models.generateContentStream({
+        model: "gemini-2.0-flash",
+        contents: contents,
+        config: {
+          systemInstruction: finalSystemInstruction,
+          temperature: temperature,
+        },
+      });
 
-    return {
-      success: true,
-      response: response.text
-    };
+      // 创建ReadableStream
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of response) {
+              const text = chunk.text;
+              if (text) {
+                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({text})}\n\n`));
+              }
+            }
+            controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
+            controller.close();
+          } catch (error) {
+            controller.error(error);
+          }
+        }
+      });
+
+      return {
+        success: true,
+        stream: stream
+      };
+    } else {
+      // 非流式响应
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: contents,
+        config: {
+          systemInstruction: finalSystemInstruction,
+          temperature: temperature,
+        },
+      });
+
+      return {
+        success: true,
+        response: response.text
+      };
+    }
 
   } catch (error) {
     console.error("Error processing AI request:", error);
