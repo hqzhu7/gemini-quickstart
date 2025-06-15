@@ -111,45 +111,39 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
             for await (const chunk of response) {
               const text = chunk.text;
               if (text) {
-                const cozePacket = {
-                  id: `chunk_${messageId++}`,
-                  event: "play",
-                  data: {
-                    is_last_msg: false,
-                    is_finish: false,
-                    is_last_packet_in_msg: false,
-                    stream_id: streamId,
-                    context_mode: 0,
-                    output_mode: 0,
-                    return_type: 0,
-                    content_type: 0,
-                    content: text,
-                    ext: {}
-                  }
+                const cozeData = {
+                  is_last_msg: false,
+                  is_finish: false,
+                  is_last_packet_in_msg: false,
+                  stream_id: streamId,
+                  context_mode: 0,
+                  output_mode: 0,
+                  return_type: 0,
+                  content_type: 0,
+                  content: text,
+                  ext: {}
                 };
-                controller.enqueue(new TextEncoder().encode(`${JSON.stringify(cozePacket)}\n\n`));
+                const sseData = `id: chunk_${messageId++}\nevent: play\ndata: ${JSON.stringify(cozeData)}\n\n`;
+                controller.enqueue(new TextEncoder().encode(sseData));
                 isFirstChunk = false;
               }
             }
             
             // 发送结束包
-            const finalPacket = {
-              id: `chunk_${messageId}`,
-              event: "play",
-              data: {
-                is_last_msg: true,
-                is_finish: true,
-                is_last_packet_in_msg: true,
-                stream_id: streamId,
-                context_mode: 0,
-                output_mode: 0,
-                return_type: 0,
-                content_type: 0,
-                content: "",
-                ext: {}
-              }
+            const finalData = {
+              is_last_msg: true,
+              is_finish: true,
+              is_last_packet_in_msg: true,
+              stream_id: streamId,
+              context_mode: 0,
+              output_mode: 0,
+              return_type: 0,
+              content_type: 0,
+              content: "",
+              ext: {}
             };
-            controller.enqueue(new TextEncoder().encode(`${JSON.stringify(finalPacket)}\n\n`));
+            const finalSseData = `id: chunk_${messageId}\nevent: play\ndata: ${JSON.stringify(finalData)}\n\n`;
+            controller.enqueue(new TextEncoder().encode(finalSseData));
             controller.close();
           } catch (error) {
             controller.error(error);
