@@ -127,7 +127,7 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
                     ext: {}
                   }
                 };
-                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(cozePacket)}\n\n`));
+                controller.enqueue(new TextEncoder().encode(`${JSON.stringify(cozePacket)}\n\n`));
                 isFirstChunk = false;
               }
             }
@@ -149,7 +149,7 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
                 ext: {}
               }
             };
-            controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(finalPacket)}\n\n`));
+            controller.enqueue(new TextEncoder().encode(`${JSON.stringify(finalPacket)}\n\n`));
             controller.close();
           } catch (error) {
             controller.error(error);
