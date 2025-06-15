@@ -100,17 +100,56 @@ export async function processAIRequest(request: AIRequest): Promise<AIResponse> 
         },
       });
 
-      // 创建ReadableStream
+      // 创建ReadableStream，转换为Coze格式
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            let messageId = 1;
+            const streamId = `message_${Date.now()}`;
+            let isFirstChunk = true;
+            
             for await (const chunk of response) {
               const text = chunk.text;
               if (text) {
-                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({text})}\n\n`));
+                const cozePacket = {
+                  id: `chunk_${messageId++}`,
+                  event: "play",
+                  data: {
+                    is_last_msg: false,
+                    is_finish: false,
+                    is_last_packet_in_msg: false,
+                    stream_id: streamId,
+                    context_mode: 0,
+                    output_mode: 0,
+                    return_type: 0,
+                    content_type: 0,
+                    content: text,
+                    ext: {}
+                  }
+                };
+                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(cozePacket)}\n\n`));
+                isFirstChunk = false;
               }
             }
-            controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
+            
+            // 发送结束包
+            const finalPacket = {
+              id: `chunk_${messageId}`,
+              event: "play",
+              data: {
+                is_last_msg: true,
+                is_finish: true,
+                is_last_packet_in_msg: true,
+                stream_id: streamId,
+                context_mode: 0,
+                output_mode: 0,
+                return_type: 0,
+                content_type: 0,
+                content: "",
+                ext: {}
+              }
+            };
+            controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(finalPacket)}\n\n`));
             controller.close();
           } catch (error) {
             controller.error(error);
